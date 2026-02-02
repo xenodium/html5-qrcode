@@ -29,6 +29,7 @@ export enum Html5QrcodeSupportedFormats {
     UPC_A,
     UPC_E,
     UPC_EAN_EXTENSION,
+    TELEPEN_NUMERIC,
 }
 
 /** {@code Html5QrcodeSupportedFormats} to friendly name map. */
@@ -51,7 +52,8 @@ const html5QrcodeSupportedFormatsTextMap
         [ Html5QrcodeSupportedFormats.RSS_EXPANDED, "RSS_EXPANDED" ],
         [ Html5QrcodeSupportedFormats.UPC_A, "UPC_A" ],
         [ Html5QrcodeSupportedFormats.UPC_E, "UPC_E" ],
-        [ Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION, "UPC_EAN_EXTENSION" ]
+        [ Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION, "UPC_EAN_EXTENSION" ],
+        [ Html5QrcodeSupportedFormats.TELEPEN_NUMERIC, "TELEPEN_NUMERIC" ]
     ]
 );
 
