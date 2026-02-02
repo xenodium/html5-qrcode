@@ -21,10 +21,12 @@ import {
     QrcodeDecoderAsync
 } from "./core";
 
-import { decodeTelepenFromCanvas } from "./telepen-decoder";
-
 /**
  * ZXing based Code decoder.
+ *
+ * Note: Telepen support is handled at the Html5QrcodeShim level,
+ * not here, to ensure it's tried on every frame regardless of
+ * which decoder is selected by the alternating logic.
  */
 export class ZXingHtml5QrcodeDecoder implements QrcodeDecoderAsync {
 
@@ -64,7 +66,6 @@ export class ZXingHtml5QrcodeDecoder implements QrcodeDecoderAsync {
     private hints: Map<any, any>;
     private verbose: boolean;
     private logger: Logger;
-    private telepenRequested: boolean;
 
     public constructor(
         requestedFormats: Array<Html5QrcodeSupportedFormats>,
@@ -75,8 +76,6 @@ export class ZXingHtml5QrcodeDecoder implements QrcodeDecoderAsync {
         }
         this.verbose = verbose;
         this.logger = logger;
-        this.telepenRequested = requestedFormats.includes(
-            Html5QrcodeSupportedFormats.TELEPEN_NUMERIC);
 
         const formats = this.createZXingFormats(requestedFormats);
         const hints = new Map();
@@ -89,21 +88,6 @@ export class ZXingHtml5QrcodeDecoder implements QrcodeDecoderAsync {
 
     decodeAsync(canvas: HTMLCanvasElement): Promise<QrcodeResult> {
         return new Promise((resolve, reject) => {
-            // Try Telepen first if requested, since ZXing doesn't support it
-            // and may misidentify Telepen barcodes as other formats
-            if (this.telepenRequested) {
-                const telepenResult = decodeTelepenFromCanvas(canvas);
-                if (telepenResult) {
-                    resolve({
-                        text: telepenResult,
-                        format: QrcodeResultFormat.create(
-                            Html5QrcodeSupportedFormats.TELEPEN_NUMERIC),
-                        debugData: { decoderName: "telepen-decoder" }
-                    });
-                    return;
-                }
-            }
-
             try {
                 resolve(this.decode(canvas));
             } catch (error) {

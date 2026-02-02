@@ -10,6 +10,7 @@
 
 import {
     QrcodeResult,
+    QrcodeResultFormat,
     Html5QrcodeSupportedFormats,
     Logger,
     QrcodeDecoderAsync,
@@ -18,17 +19,19 @@ import {
 
 import { ZXingHtml5QrcodeDecoder } from "./zxing-html5-qrcode-decoder";
 import { BarcodeDetectorDelegate } from "./native-bar-code-detector";
+import { decodeTelepenFromCanvas } from "./telepen-decoder";
 
 /**
  * Shim layer for {@interface QrcodeDecoder}.
- * 
+ *
  * Currently uses {@class ZXingHtml5QrcodeDecoder}, can be replace with another library.
  */
 export class Html5QrcodeShim implements RobustQrcodeDecoderAsync {
-    
+
     private verbose: boolean;
     private primaryDecoder: QrcodeDecoderAsync;
     private secondaryDecoder: QrcodeDecoderAsync | undefined;
+    private telepenRequested: boolean;
 
     private readonly EXECUTIONS_TO_REPORT_PERFORMANCE = 100;
     private executions: number = 0;
@@ -41,6 +44,8 @@ export class Html5QrcodeShim implements RobustQrcodeDecoderAsync {
         verbose: boolean,
         logger: Logger) {
         this.verbose = verbose;
+        this.telepenRequested = requestedFormats.includes(
+            Html5QrcodeSupportedFormats.TELEPEN_NUMERIC);
 
         // Use BarcodeDetector library if enabled by config and is supported.
         if (useBarCodeDetectorIfSupported
@@ -61,6 +66,22 @@ export class Html5QrcodeShim implements RobustQrcodeDecoderAsync {
     async decodeAsync(canvas: HTMLCanvasElement): Promise<QrcodeResult> {
         let startTime = performance.now();
         try {
+            // If Telepen is requested, try it first since neither BarcodeDetector
+            // nor ZXing support it natively. This ensures camera scanning works
+            // for Telepen barcodes on every frame.
+            if (this.telepenRequested) {
+                const telepenResult = decodeTelepenFromCanvas(canvas);
+                if (telepenResult) {
+                    return {
+                        text: telepenResult,
+                        format: QrcodeResultFormat.create(
+                            Html5QrcodeSupportedFormats.TELEPEN_NUMERIC),
+                        debugData: { decoderName: "telepen-decoder" }
+                    };
+                }
+            }
+
+            // Fall back to standard decoders for other formats
             return await this.getDecoder().decodeAsync(canvas);
         } finally {
             this.possiblyLogPerformance(startTime);
@@ -71,6 +92,19 @@ export class Html5QrcodeShim implements RobustQrcodeDecoderAsync {
         : Promise<QrcodeResult> {
         let startTime = performance.now();
         try {
+            // Try Telepen first if requested
+            if (this.telepenRequested) {
+                const telepenResult = decodeTelepenFromCanvas(canvas);
+                if (telepenResult) {
+                    return {
+                        text: telepenResult,
+                        format: QrcodeResultFormat.create(
+                            Html5QrcodeSupportedFormats.TELEPEN_NUMERIC),
+                        debugData: { decoderName: "telepen-decoder" }
+                    };
+                }
+            }
+
             return await this.primaryDecoder.decodeAsync(canvas);
         } catch(error) {
             if (this.secondaryDecoder) {
